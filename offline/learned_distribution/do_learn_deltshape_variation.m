@@ -1,0 +1,121 @@
+function Distribution = do_learn_deltshape_variation( Data,options )
+
+%% loading learned shape model
+%load([options.modelPath options.slash options.datasetName '_ShapeModel.mat']);
+
+%% loading data
+Data_mean = normalize_data( Data, options );
+n = length(Data);
+nl = length(Data(1).shape);
+
+% Construct a matrix with all contour point data of the training data set.
+x=zeros(nl*2,n);
+for i=1:n
+    x(1:2:end, i) = Data_mean(i).shape(:,1);
+    x(2:2:end, i) = Data_mean(i).shape(:,2);
+    %x(:,i)=[TrainingData(i).centerx TrainingData(i).centery]';
+end
+clear Data_mean
+s=size(x,2);
+% Calculate the mean 
+Meanshape =sum(x,2)/s;
+transVec   = zeros(n,2);
+scaleVec   = zeros(n,2);
+aligned_deltshape = zeros(n,nl*2);
+debug = 0;
+img = 255 * ones(options.canvasSize(1), options.canvasSize(2), 3);
+%% computing the translation and scale vectors %%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+for i = 1 : n
+    
+    %% the information of i-th image
+    
+    
+    %img   = imread(Data(i).img);
+    shape = Data(i).shape;
+    
+    %% if detect face using viola opencv
+    %boxes = detect_face( img , options );
+    
+    %% if using ground-truth
+    boxes = [];
+    
+    %% predict the face box
+    rect = get_correct_region( boxes, shape, 1 );
+    
+    %% predict initial location
+    [initX,initY,width,height] = init_face_location( rect );
+    
+    init_shape = align_init_shape(Meanshape, ...
+                                              initX, initY, width, height);
+    
+%     if debug
+%         figure(1); imshow(img); hold on;
+%         rectangle('Position',  rect, 'EdgeColor', 'g');
+%         draw_shape(init_shape.XY(1:2:end), init_shape.XY(2:2:end), 'y');
+%         draw_shape(shape(:,1), shape(:,2), 'r');
+%         hold off;
+%         pause;
+%     end
+    
+    [aligned_shape, cropIm] = align_to_mean_shape( Meanshape, img , ...
+        vec_2_shape(init_shape.XY) , options );
+    
+    [aligned_true_shape] = align_shape(aligned_shape.TransM,shape_2_vec(shape));
+        
+%     if debug
+%         figure(1); imshow(cropIm); hold on;
+%         draw_shape(aligned_shape.XY(1:2:end), ...
+%             aligned_shape.XY(2:2:end), 'y');
+%         draw_shape(aligned_true_shape(1:2:end), ...
+%             aligned_true_shape(2:2:end), 'r');
+%         hold off;
+%         pause;
+%     end    
+    
+    initVector = vec_2_shape(aligned_shape.XY);
+    trueVector = vec_2_shape(aligned_true_shape);
+    
+    %compute mean and covariance matrices of translation.
+    meanInitVector  = mean(initVector);
+    meanTrueVector  = mean(trueVector);
+    
+    %compute bounding box size
+    initLeftTop     = min(initVector);
+    initRightBottom = max(initVector);
+    
+    initFaceSize = abs(initLeftTop - initRightBottom);
+    
+    trueLeftTop     = min(trueVector);
+    trueRightBottom = max(trueVector);
+    
+    trueFaceSize = abs(trueLeftTop - trueRightBottom);
+    
+    transVec(i,:) = (meanInitVector - meanTrueVector)./initFaceSize;
+    scaleVec(i,:) = initFaceSize./trueFaceSize;
+    initFaceSize = repmat(initFaceSize,size(trueVector,1),1);
+    tmp = initFaceSize./trueVector;
+    aligned_deltshape(i,:) = shape_2_vec(tmp);
+
+    clear xy;
+    
+    %    end
+    
+end
+
+%compute mean and covariance matrices of scale.
+[mu_trans,cov_trans] = mean_covariance_of_data ( transVec );
+[mu_scale,cov_scale] = mean_covariance_of_data ( scaleVec );
+[Miu, Sigma]        = mean_covariance_of_data (aligned_deltshape);
+Distribution.mu_trans  = mu_trans;
+Distribution.cov_trans = cov_trans;
+Distribution.mu_scale  = mu_scale;
+Distribution.cov_scale = cov_scale;
+Distribution.Miu    = Miu;
+Distribution.Sigma  = Sigma;
+% save([options.modelPath options.slash options.datasetName ...
+%     '_DataVariation.mat'], 'DataVariation');
+ save('./initial_shape/Meanshape_29.mat','Meanshape');
+clear Data;
+
+end
