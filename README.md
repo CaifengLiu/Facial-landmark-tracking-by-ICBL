@@ -4,4 +4,4 @@ The Incremental Cascade Broad Learning framework has been uploaded. Please downl
 The downloaded models contain offline-models(w300_DataVariation_offline.mat,w300BLS_regressors_offline.mat,w300LearnedDistribution_offline.mat) and frame-judge classifier. Unrar them to the right file paths for running the testing codes or training the new model with new parameters.
 Please run the TestOnlineModel.m file and set the ralated file paths you like.
 In these codes, the face boxs(bounding boxes) are released by the dataset or can be obtained by using the DLIB library. 
-Copyright : These Matlab code for the paper "An Incrementally Cascaded Broad Learning Framework to Facial Landmark Tracking", which will be published soon. The code is released as is for the research purposes only. Please contact me if you use the code.
+Copyright : These Matlab code for the paper "An Incrementally Cascaded Broad Learning Framework to Facial Landmark Tracking", which will be published soon. The code is released as is for the research purposes only. Please contact me(Caifeng Liu mail: liucaifeng12345@mail.dlut.edu.cn) if you use the code.
